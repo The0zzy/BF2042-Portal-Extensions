@@ -72,8 +72,8 @@ function loadFromLocalStorage<T>(key: string): T {
         if (typeof data === "string") {
             return JSON.parse(data) as T;
         }
-    } catch (e) {
-        //Do nothing
+    } catch {
+        // Do nothing
     }
 
     return {} as T;

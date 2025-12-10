@@ -6,10 +6,10 @@ declare global {
     const Blockly: unknown;
     const _Blockly: {
         ContextMenu: {
-            // eslint-disable-next-line @typescript-eslint/ban-types
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
             show: Function;
         };
-        // eslint-disable-next-line @typescript-eslint/ban-types
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
         inject: Function;
     };
 

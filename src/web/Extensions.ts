@@ -16,7 +16,6 @@ import {
     domToText,
     domToVariables,
     domToWorkspace,
-    textToDom,
     workspaceToDom,
 } from "blockly/core/xml";
 
@@ -51,7 +50,6 @@ interface BlocklyWrapper {
         mouseToSvg: typeof mouseToSvg;
 
         workspaceToDom: typeof workspaceToDom;
-        textToDom: typeof textToDom;
 
         domToWorkspace: typeof domToWorkspace;
         domToVariables: typeof domToVariables;
@@ -158,7 +156,7 @@ function blocklyWrapper(
 
         getAllItems: function (): Array<{ key: string; value: RegistryItem }> {
             return [...blockly.ContextMenuRegistry.registry.registry_].map(
-                (e: { [0]: string; [1]: RegistryItem }) => {
+                (e: { [0]: string;[1]: RegistryItem }) => {
                     return {
                         key: e[0],
                         value: e[1],
@@ -181,7 +179,6 @@ function blocklyWrapper(
         mouseToSvg: blockly.browserEvents.mouseToSvg,
 
         workspaceToDom: blockly.Xml.workspaceToDom,
-        textToDom: blockly.Xml.textToDom,
 
         domToWorkspace: blockly.Xml.domToWorkspace,
         domToVariables: blockly.Xml.domToVariables,
@@ -702,17 +699,17 @@ function exportBlocks(id: string, scopeType: ScopeType): RegistryItem {
             {
                 text: "XML",
                 enabled: true,
-                callback: () => exportToXml(scope),
+                callback: (): Promise<void> => exportToXml(scope),
             },
             {
                 text: "SVG",
                 enabled: true,
-                callback: () => exportToSvg(scope),
+                callback: (): Promise<void> => exportToSvg(scope),
             },
             {
                 text: "PNG",
                 enabled: true,
-                callback: () => exportToPngAsFile(scope),
+                callback: (): Promise<void> => exportToPngAsFile(scope),
             },
         ];
 
@@ -839,8 +836,7 @@ function exportBlocks(id: string, scopeType: ScopeType): RegistryItem {
         svg.setAttribute("viewBox", `${x} ${y} ${width} ${height}`);
         svg.setAttribute(
             "class",
-            `blocklySvg ${workspace.options.renderer || "geras"}-renderer ${
-                workspace.getTheme ? workspace.getTheme().name + "-theme" : ""
+            `blocklySvg ${workspace.options.renderer || "geras"}-renderer ${workspace.getTheme ? workspace.getTheme().name + "-theme" : ""
             }`,
         );
         svg.setAttribute("width", width.toString());
@@ -897,14 +893,14 @@ function exportBlocks(id: string, scopeType: ScopeType): RegistryItem {
                                     resolve(f.target.result as string);
                                 };
                                 reader.readAsDataURL(blob);
-                            } catch (_) {
+                            } catch {
                                 reject();
                             }
                         },
                     );
 
                     imageDataUrlCache.set(url, dataUrl);
-                } catch (_) {
+                } catch {
                     imageDataUrlCache.set(url, url);
                 }
             }
@@ -1050,7 +1046,7 @@ function importBlocksFromFile(): RegistryItem {
                             alert("Failed to import workspace from XML!");
                         }
                     }
-                } catch (e) {
+                } catch {
                     alert("Failed to import workspace!");
                 }
             };
@@ -1266,10 +1262,23 @@ function createSubMenuItem(
     }
 
     return {
-        text:
-            typeof data.displayText === "string"
-                ? data.displayText
-                : data.displayText(scope),
+        text: ((): string => {
+            if (typeof data.displayText === "function") {
+                const result = (data.displayText as (
+                    s: Scope,
+                ) => string | HTMLElement)(scope);
+
+                if (typeof result === "string") return result;
+                if (result instanceof HTMLElement) return result.textContent || "";
+                return String(result);
+            }
+
+            if (typeof data.displayText === "string") return data.displayText;
+
+            if (data.displayText instanceof HTMLElement) return data.displayText.textContent || "";
+
+            return String(data.displayText);
+        })(),
         enabled: data.preconditionFn(scope) === "enabled",
         callback: () => data.callback(scope),
     };
@@ -1321,20 +1330,21 @@ function saveXml(blocks: Array<BlockSvg>): string {
 }
 
 function loadJson(data: JsonWorkspaceFile): boolean {
-    const workspace = BlocklyWrapper.getMainWorkspace();
+    // const workspace = BlocklyWrapper.getMainWorkspace();
 
     try {
-        const variables = BlocklyWrapper.Xml.textToDom(
-            data.variables ? data.variables : "<xml />",
-        );
+        // const variables = BlocklyWrapper.Xml.textToDom(
+        //     data.variables ? data.variables : "<xml />",
+        // );
 
-        BlocklyWrapper.Xml.domToVariables(variables, workspace);
-        BlocklyWrapper.Xml.domToWorkspace(
-            BlocklyWrapper.Xml.textToDom(data.mainWorkspace),
-            workspace,
-        );
+        // BlocklyWrapper.Xml.domToVariables(variables, workspace);
+        // BlocklyWrapper.Xml.domToWorkspace(
+        //     BlocklyWrapper.Xml.textToDom(data.mainWorkspace),
+        //     workspace,
+        // );
 
-        return true;
+        // return true;
+        throw "Not implemented" + data;
     } catch (e) {
         BF2042Portal.Shared.logError("Failed to load workspace from JSON!", e);
     }
@@ -1344,115 +1354,7 @@ function loadJson(data: JsonWorkspaceFile): boolean {
 
 function loadXml(xmlText: string): boolean {
     try {
-        if (!xmlText) {
-            return false;
-        }
-
-        xmlText = xmlText.trim();
-
-        if (!xmlText.startsWith("<block")) {
-            return false;
-        }
-
-        const domText = `<xml xmlns="https://developers.google.com/blockly/xml">${xmlText.trim()}</xml>`;
-
-        const xmlDom = BlocklyWrapper.Xml.textToDom(domText);
-
-        //NOTE: Extract variables
-        const variableBlocks = xmlDom.querySelectorAll(
-            "block[type='variableReferenceBlock']",
-        );
-
-        interface Variable {
-            objectType: string;
-            variableName: string;
-        }
-
-        const variables: Array<Variable> = [];
-
-        variableBlocks.forEach((e: Element) => {
-            const objectType = e.querySelector(
-                "field[name='OBJECTTYPE']",
-            ).textContent;
-            const variableName =
-                e.querySelector("field[name='VAR']").textContent;
-
-            if (
-                objectType &&
-                variableName &&
-                !variables.find(
-                    (v: Variable) =>
-                        v.objectType === objectType &&
-                        v.variableName === variableName,
-                )
-            ) {
-                variables.push({
-                    objectType,
-                    variableName,
-                });
-            }
-        });
-
-        const variablesXml = document.createElement("variables");
-
-        variables.forEach((e: Variable) => {
-            const variable = document.createElement("variable");
-            variable.setAttribute("type", e.objectType);
-            variable.innerText = e.variableName;
-
-            variablesXml.appendChild(variable);
-        });
-
-        BlocklyWrapper.Xml.domToVariables(
-            variablesXml,
-            BlocklyWrapper.getMainWorkspace(),
-        );
-
-        //NOTE: Determine a bounding box
-        let minX: number;
-        let minY: number;
-
-        for (let i = 0; i < xmlDom.childNodes.length; i++) {
-            const block = xmlDom.childNodes[i] as Element;
-
-            const x = parseInt(block.getAttribute("x"));
-            const y = parseInt(block.getAttribute("y"));
-
-            if (!minX || x < minX) {
-                minX = x;
-            }
-
-            if (!minY || y < minY) {
-                minY = y;
-            }
-        }
-
-        //NOTE: Transform blocks to the minimum coords, then move them to their target position.
-        for (let i = 0; i < xmlDom.childNodes.length; i++) {
-            const block = xmlDom.childNodes[i] as Element;
-
-            const x = parseInt(block.getAttribute("x"));
-            const y = parseInt(block.getAttribute("y"));
-
-            if (x === minX) {
-                block.setAttribute("x", mouseCoords.x.toString());
-            } else {
-                block.setAttribute("x", (x - minX + mouseCoords.x).toString());
-            }
-
-            if (y === minY) {
-                block.setAttribute("y", mouseCoords.y.toString());
-            } else {
-                block.setAttribute("y", (y - minY + mouseCoords.y).toString());
-            }
-        }
-
-        BlocklyWrapper.Xml.domToWorkspace(
-            xmlDom,
-            BlocklyWrapper.getMainWorkspace(),
-        );
-
-        return true;
+        throw "Not implemented" + xmlText;
     } catch (e) {
         BF2042Portal.Shared.logError("Failed to load workspace from XML!", e);
     }
@@ -1891,7 +1793,6 @@ function initializeBlocks(blockDefinitions: any): void {
     //Blocks - Selection Lists
     const selectionLists = [
         ...new Set(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             blockDefinitions.selectionLists.map(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (e: any) => e.listType + "Item",
