@@ -1,9 +1,11 @@
-# BF2042 Portal Extensions
+# BF Portal Extension
+
 > NOTE! As of v2.0.0 the extension is purposely split into a Browser Extension with minimal functionality and a Web Extension that does the rest as described below. The Browser Extension will load a Web Extension of your choice, which in turn is also responsible for managing plugins. The recommended Web Extension comes with a default Plugin Manager. In order to load additional plugins, you can open the Plugin Manager by right-clicking a Blockly workspace and going into Options > Plugin Manager.
 
-This extension adds additional functionality to the BF2042 Portal Rules Editor.
+This extension adds advanced functionality to Battlefield Portal Rules Editor.
 
 Functionality available:
+
 - Open Documentation
 - Copy to Clipboard
 - Paste from Clipboard
@@ -32,45 +34,50 @@ Functionality available:
 ## Installation
 
 ### Chrome Web Store
+
 Get it here: https://chrome.google.com/webstore/detail/bf2042-portal-extensions/ojegdnmadhmgfijhiibianlhbkepdhlj
 
 ### Edge Addons
+
 Get it here: https://microsoftedge.microsoft.com/addons/detail/bf2042-portal-extensions/abkgoonnpmbeekieegggnicdheolmnkf
 
 ### Mozilla Addons
+
 Get it here: https://addons.mozilla.org/firefox/addon/bf2042-portal-extensions/
 
 ### Manually
 
 #### Chrome and Edge
+
 You can download and load the extension yourself into Chrome or Edge:
 
-1. Download the latest `chromium.zip` [release](https://github.com/LennardF1989/BF2042-Portal-Extensions/releases).
+1. Download the latest `chromium.zip` [release](https://github.com/LennardF1989/BF-Portal-Extension/releases).
 2. Extract the ZIP somewhere on your filesystem.
-2. Open up Chrome, go into Extensions and enable Developer Mode.
-3. Click "Load extracted extension" and browse to the extracted folder from step 2.
+3. Open up Chrome, go into Extensions and enable Developer Mode.
+4. Click "Load extracted extension" and browse to the extracted folder from step 2.
 
-Done! The extension is now active, simply refresh the BF2042 Portal to see the effects in the Rules Editor.
+Done! The extension is now active, simply refresh Battlefield Portal to see the effects in the Rules Editor.
 
 ### Firefox
+
 You can download and load the extension yourself into Firefox:
 
-1. Download the latest `firefox.xpi` [release](https://github.com/LennardF1989/BF2042-Portal-Extensions/releases).
+1. Download the latest `firefox.xpi` [release](https://github.com/LennardF1989/BF-Portal-Extension/releases).
 2. Open up Firefox, and go to following special page: `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on" and browse to the downloaded file from step 1.
 
-Done! The extension is now active, simply refresh the BF2042 Portal to see the effects in the Rules Editor.
+Done! The extension is now active, simply refresh Battlefield Portal to see the effects in the Rules Editor.
 
 ## Plugins
-It's possible to load plugins with this extension. 
 
-For information on how to use plugins, please read [this](https://github.com/LennardF1989/BF2042-Portal-Extensions/wiki/Plugins).
+It's possible to load plugins with this extension.
+
+For information on how to use plugins, please read [this](https://github.com/LennardF1989/BF-Portal-Extension/wiki/Plugins).
 
 A list of curated plugins and plugin managers can be found [here](/plugins/plugin-index.md).
 
 If you would like to develop your own plugins, please read [this](/plugins/README.md).
 
 ## Donations
-If you appreciate what I'm doing, consider buying me a cup of coffee!
 
-https://paypal.me/lennardf1989
+If you appreciate what the community is doing, consider sponsoring the contributors and/or organization.
