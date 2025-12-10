@@ -1,5 +1,5 @@
-const EVENT_EXTENSIONS_INIT = "bf2042-portal-extensions-init";
-const EVENT_EXTENSIONS_PASTE = "bf2042-portal-extensions-paste";
+const EVENT_EXTENSIONS_INIT = "bf-portal-extension-init";
+const EVENT_EXTENSIONS_PASTE = "bf-portal-extension-paste";
 
 let manifest;
 let config;
@@ -43,7 +43,7 @@ function initEvents() {
 
             dispatchWebEvent(
                 EVENT_EXTENSIONS_PASTE,
-                result ? temp.value : undefined,
+                result ? temp.value : undefined
             );
 
             document.body.removeChild(temp);

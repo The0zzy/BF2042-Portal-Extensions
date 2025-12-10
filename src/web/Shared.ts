@@ -15,7 +15,7 @@ export function init(): void {
     pasteTextFromClipboardImplementation = pasteTextFromClipboardFirefox;
 
     window.addEventListener(
-        "bf2042-portal-extensions-paste",
+        "bf-portal-extension-paste",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async function (message: any) {
             pasteTextFromClipboardFirefoxCallback(message.detail);
@@ -52,7 +52,7 @@ async function pasteTextFromClipboardFirefox(): Promise<string> {
             }
         };
 
-        const event: Event = new Event("bf2042-portal-extensions-paste");
+        const event: Event = new Event("bf-portal-extension-paste");
         document.dispatchEvent(event);
     });
 }

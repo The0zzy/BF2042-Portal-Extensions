@@ -19,29 +19,25 @@ BF2042Portal.Startup = (function () {
 
     function initExtension() {
         return new Promise(function (resolve, _reject) {
-            window.addEventListener(
-                "bf2042-portal-extensions-init",
-                async function (message) {
-                    version = message.detail.version;
+            window.addEventListener("bf-portal-extension-init", async function (
+                message
+            ) {
+                version = message.detail.version;
 
-                    if (
-                        !message.detail.manifest ||
-                        !message.detail.manifest.url
-                    ) {
-                        alert(
-                            "Failed to load BF2042 Portal Extensions!\n\nClick the icon of the Browser Extension and make sure both the Manifest URL and Version are configured correctly.",
-                        );
+                if (!message.detail.manifest || !message.detail.manifest.url) {
+                    alert(
+                        "Failed to load BF Portal Extension!\n\nClick the icon of the Browser Extension and make sure both the Manifest URL and Version are configured correctly."
+                    );
 
-                        return;
-                    }
+                    return;
+                }
 
-                    manifest = message.detail.manifest;
+                manifest = message.detail.manifest;
 
-                    resolve(message.detail);
-                },
-            );
+                resolve(message.detail);
+            });
 
-            const event = new Event("bf2042-portal-extensions-init");
+            const event = new Event("bf-portal-extension-init");
             document.dispatchEvent(event);
         });
     }
@@ -76,9 +72,7 @@ BF2042Portal.Startup = (function () {
 
             document.body.appendChild(scriptElement);
 
-            console.log(
-                `BF2042 Portal Extension v${version} loaded successfully!`,
-            );
+            console.log(`BF Portal Extension v${version} loaded successfully!`);
         });
     }
 
