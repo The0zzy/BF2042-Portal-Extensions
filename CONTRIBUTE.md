@@ -19,28 +19,61 @@ Welcome! This document provides comprehensive information about the project stru
 
 ## Project Overview
 
-**BF Portal Extension** is a browser extension that adds advanced functionality to Battlefield Portal across multiple game titles. It provides features like:
+**BF Portal Extension** is a browser extension that adds advanced functionality to the Battlefield Portal Website.
+It provides features like:
 
-- Documentation access and code clipboard operations
-- Block manipulation (expand/collapse, comments, layout changes)
-- Import/Export capabilities (JSON, SVG, PNG)
-- Multi-block selection and management
-- Plugin system for extensibility
+-   Documentation access and code clipboard operations
+-   Block manipulation (expand/collapse, comments, layout changes)
+-   Import/Export capabilities (JSON, SVG, PNG)
+-   Multi-block selection and management
+-   Plugin system for extensibility
 
 As of v2.0.0, the project uses a **split architecture**:
 
-- **Browser Extension**: Minimal functionality, loads a Web Extension
-- **Web Extension**: Provides core functionality and manages plugins
-- **Plugin System**: Third-party plugins extend functionality
+-   **Browser Extension**: Minimal functionality, loads a Web Extension
+-   **Web Extension**: Provides core functionality and manages plugins
+-   **Plugin System**: Third-party plugins extend functionality
 
 The extension is distributed across multiple game titles' Portal editors and available on:
 
-- Chrome Web Store
-- Edge Addons
-- Mozilla Addons
-- Manual installation (GitHub releases)
+-   Chrome Web Store
+-   Edge Addons
+-   Mozilla Addons
+-   Manual installation (GitHub releases)
 
 ---
+
+## Loading flow: Browser extension → Web extension → Plugins
+
+The project uses a small handshake and script-injection flow so the lightweight browser extension can select and load the larger web extension bundle at runtime. Below is a concise, actionable summary contributors should follow when working on extension/plugin loading.
+
+-   Browser extension bootstrap (`src/browser/extension/app.js`):
+
+    -   Reads stored config (manifest URL + selected version) from `chrome.storage` or extension storage.
+    -   Injects the web bootstrap script at `/web/app.js` into the page (`injectScript("/web/app.js")`).
+    -   Dispatches a DOM event (`bf-portal-extension-init`) that the web bootstrap listens for to request the selected manifest and version.
+
+-   Web bootstrap (`src/browser/web/app.js`):
+
+    -   Listens for the `bf-portal-extension-init` event and responds with an object containing `version` and `manifest` (the selected manifest entry supplied by the browser extension).
+    -   Waits for Blockly block definitions to be available, then appends a `<script src="${manifest.url}">` to `document.body` to load the full web extension bundle.
+
+-   Web extension bundle (compiled TypeScript, entry `src/web/App.ts`):
+
+    -   Initializes `BF2042Portal.*` runtime objects and calls `Extensions.init()` and other startup routines.
+    -   Passes startup data into the plugin system: see the call in `src/web/Extensions.ts` where `pluginInit({ ..., pluginManager: BF2042Portal.Startup.getManifest().pluginManager })` is invoked. That `pluginManager` property is read from the selected extension manifest.
+
+-   Plugin system (`src/web/Plugins.ts`):
+    -   The web core exposes a `Plugins.init(data)` API. If `data.pluginManager` exists the core will call `loadPluginManager(...)`.
+    -   The plugin manager itself is loaded as a plugin: the core creates a `BasePlugin` entry with id `plugin-manager` and injects a `<script>` tag for `pluginManager.baseUrl + pluginManager.main`.
+    -   Each plugin is represented by a `BasePlugin` that provides convenience API methods (e.g., `getSelectedBlocks()`, `getMouseCoords()`, `registerMenu()`, etc.). When the plugin's script `load` event fires, the core calls `plugin.initializeWorkspace()`.
+
+Key consequences and contributor guidance:
+
+-   The plugin manager is not baked into the core runtime — it is a plugin that the web extension will automatically load when `pluginManager` is present in the manifest. In other words: the core provides the hook and loader; the plugin manager is an external plugin loaded through that hook.
+-   Plugin manifests (the small JSON files that describe a plugin) should follow the project's `PluginManifest` shape: `id`, `main`, optional `loadAsModule`, etc. See `src/web/Plugins.ts` for the exact interface used at runtime.
+-   To change which plugin manager is loaded, update the browser extension manifest/selected manifest entry (the extension stores per-version manifest entries via the options UI). The manifest's `pluginManager` field should provide `baseUrl` and `main` (or a fully-qualified `main` file under `baseUrl`).
+-   For local testing, use the existing local server workflow (`npm run dev:server`) and point the browser extension options to the local `dist`/plugin manifest (or host plugin files via `localhost`).
 
 ## Project Structure
 
@@ -97,10 +130,10 @@ BF-Portal-Extension/
 
 ### Key Directories
 
-- **`src/browser/`**: Code specific to browser extension manifest and options UI
-- **`src/web/`**: Main TypeScript source code for the web extension (compiled with Vite)
-- **`build/`**: Node.js scripts that handle packaging for different browsers
-- **`plugins/`**: Example plugins and plugin development documentation
+-   **`src/browser/`**: Code specific to browser extension manifest and options UI
+-   **`src/web/`**: Main TypeScript source code for the web extension (compiled with Vite)
+-   **`build/`**: Node.js scripts that handle packaging for different browsers
+-   **`plugins/`**: Example plugins and plugin development documentation
 
 ---
 
@@ -118,11 +151,11 @@ BF-Portal-Extension/
 
 ### Development Dependencies
 
-- **@typescript-eslint/eslint-plugin** & **@typescript-eslint/parser**: TypeScript linting support
-- **vite-plugin-eslint**: ESLint integration with Vite
-- **nodemon**: File watcher for development
-- **live-server**: Local development server
-- **archiver**: ZIP file creation for browser extension packaging
+-   **@typescript-eslint/eslint-plugin** & **@typescript-eslint/parser**: TypeScript linting support
+-   **vite-plugin-eslint**: ESLint integration with Vite
+-   **nodemon**: File watcher for development
+-   **live-server**: Local development server
+-   **archiver**: ZIP file creation for browser extension packaging
 
 ### Build & Development Scripts
 
@@ -130,20 +163,20 @@ Located in `package.json`:
 
 ```json
 {
-  "scripts": {
-    "build:web": "vite build", // Build web extension
-    "build:browser:chromium": "node build/chromium.js", // Build Chrome/Edge
-    "build:browser:firefox": "node build/firefox.js", // Build Firefox
-    "build:browser:all": "node build/build.js", // Build all browsers
-    "build:browser:all:nopack": "node build/build.js --nopack", // No compression
-    "dev:source:browser": "nodemon --ext * --watch src/browser --exec npm run build:browser:all:nopack",
-    "dev:source:web": "nodemon --ext * --watch src/web --exec npm run build:web",
-    "dev:server": "live-server --port=1989 --cors --no-browser .",
-    "prettier": "prettier --write \"**/*.{js,ts,css,html,json}\"",
-    "eslint": "eslint ./src/web",
-    "typecheck": "tsc --noEmit",
-    "lint": "npm run eslint && npm run typecheck"
-  }
+    "scripts": {
+        "build:web": "vite build", // Build web extension
+        "build:browser:chromium": "node build/chromium.js", // Build Chrome/Edge
+        "build:browser:firefox": "node build/firefox.js", // Build Firefox
+        "build:browser:all": "node build/build.js", // Build all browsers
+        "build:browser:all:nopack": "node build/build.js --nopack", // No compression
+        "dev:source:browser": "nodemon --ext * --watch src/browser --exec npm run build:browser:all:nopack",
+        "dev:source:web": "nodemon --ext * --watch src/web --exec npm run build:web",
+        "dev:server": "live-server --port=1989 --cors --no-browser .",
+        "prettier": "prettier --write \"**/*.{js,ts,css,html,json}\"",
+        "eslint": "eslint ./src/web",
+        "typecheck": "tsc --noEmit",
+        "lint": "npm run eslint && npm run typecheck"
+    }
 }
 ```
 
@@ -151,28 +184,28 @@ Located in `package.json`:
 
 **Editor Configuration** (`.editorconfig`):
 
-- Charset: UTF-8
-- Line endings: LF
-- Indentation: 4 spaces
-- Max line length: 80 characters
+-   Charset: UTF-8
+-   Line endings: LF
+-   Indentation: 4 spaces
+-   Max line length: 80 characters
 
 **Prettier Configuration** (in `package.json`):
 
-- Semicolons: enabled
-- Tab width: 4 spaces
-- Trailing commas: all
+-   Semicolons: enabled
+-   Tab width: 4 spaces
+-   Trailing commas: all
 
 **ESLint Configuration** (`.eslintrc.js`):
 
-- Base: ESLint recommended rules
-- TypeScript: `@typescript-eslint/recommended`
-- Strict type annotations required
-- Linting targets: `src/web` only (excludes dist, vendors, etc.)
+-   Base: ESLint recommended rules
+-   TypeScript: `@typescript-eslint/recommended`
+-   Strict type annotations required
+-   Linting targets: `src/web` only (excludes dist, vendors, etc.)
 
 **Ignored by Formatters/Linters**:
 
-- `dist/`, `node_modules/`, `**/vendors`, `res/`, `temp/`
-- Configuration files: `.eslintrc.js`, `vite.config.ts`
+-   `dist/`, `node_modules/`, `**/vendors`, `res/`, `temp/`
+-   Configuration files: `.eslintrc.js`, `vite.config.ts`
 
 ---
 
@@ -180,33 +213,33 @@ Located in `package.json`:
 
 ### Prerequisites
 
-- **Node.js** 14+ and **npm** (comes with Node.js)
-- **Git** for version control
-- A modern code editor (VS Code recommended)
-- One or more browsers for testing:
-  - Chrome/Edge for Chromium builds
-  - Firefox for Firefox builds
+-   **Node.js** 14+ and **npm** (comes with Node.js)
+-   **Git** for version control
+-   A modern code editor (VS Code recommended)
+-   One or more browsers for testing:
+    -   Chrome/Edge for Chromium builds
+    -   Firefox for Firefox builds
 
 ### Installation Steps
 
 1. **Clone the repository**
 
-   ```bash
-   git clone https://github.com/LennardF1989/BF-Portal-Extension.git
-   cd BF-Portal-Extension
-   ```
+    ```bash
+    git clone https://github.com/LennardF1989/BF-Portal-Extension.git
+    cd BF-Portal-Extension
+    ```
 
 2. **Install dependencies**
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 3. **Verify your setup**
-   ```bash
-   npm run lint
-   npm run typecheck
-   ```
+    ```bash
+    npm run lint
+    npm run typecheck
+    ```
 
 ### Optional: VS Code Setup
 
@@ -214,9 +247,9 @@ The project includes a workspace file: `bf-portal-extension.code-workspace`
 
 For best experience, consider installing:
 
-- **ESLint** extension
-- **Prettier** extension
-- **TypeScript Vue Plugin** (if working with Vue-related code)
+-   **ESLint** extension
+-   **Prettier** extension
+-   **TypeScript Vue Plugin** (if working with Vue-related code)
 
 ---
 
@@ -274,25 +307,25 @@ npm run build:browser:all:nopack
 
 1. **Terminal 1: Watch & build browser extension**
 
-   ```bash
-   npm run dev:source:browser
-   ```
+    ```bash
+    npm run dev:source:browser
+    ```
 
-   This watches `src/browser/` and rebuilds on changes.
+    This watches `src/browser/` and rebuilds on changes.
 
 2. **Terminal 2: Watch & build web extension**
 
-   ```bash
-   npm run dev:source:web
-   ```
+    ```bash
+    npm run dev:source:web
+    ```
 
-   This watches `src/web/` and rebuilds on changes.
+    This watches `src/web/` and rebuilds on changes.
 
 3. **Terminal 3: Start local server**
-   ```bash
-   npm run dev:server
-   ```
-   This serves files on `http://localhost:1989` with CORS enabled.
+    ```bash
+    npm run dev:server
+    ```
+    This serves files on `http://localhost:1989` with CORS enabled.
 
 ### Testing the Extension
 
@@ -320,8 +353,8 @@ npm run lint
 
 This runs:
 
-- ESLint for code style violations
-- TypeScript compiler for type errors
+-   ESLint for code style violations
+-   TypeScript compiler for type errors
 
 Auto-fix formatting issues:
 
@@ -335,50 +368,50 @@ npm run prettier
 
 ### TypeScript Requirements
 
-- **Strict mode**: `noImplicitAny: true` enforced
-- **Target**: ES2020
-- **Module system**: CommonJS
-- **Source maps**: Enabled for debugging
+-   **Strict mode**: `noImplicitAny: true` enforced
+-   **Target**: ES2020
+-   **Module system**: CommonJS
+-   **Source maps**: Enabled for debugging
 
 ### Type Annotations
 
 In `.eslintrc.js`, strict type requirements are enforced:
 
-- `@typescript-eslint/typedef` rule requires explicit types for:
-  - Function parameters
-  - Object destructuring
-  - Arrow function parameters
-  - Member variables
-  - Property declarations
-  - Array destructuring
+-   `@typescript-eslint/typedef` rule requires explicit types for:
+    -   Function parameters
+    -   Object destructuring
+    -   Arrow function parameters
+    -   Member variables
+    -   Property declarations
+    -   Array destructuring
 
 Example:
 
 ```typescript
 // ✅ Good
 const getValue = (key: string): string => {
-  return key;
+    return key;
 };
 
 // ❌ Bad
 const getValue = (key) => {
-  return key;
+    return key;
 };
 ```
 
 ### Naming Conventions
 
-- Use camelCase for variables and functions
-- Use PascalCase for classes and types
-- Use UPPER_SNAKE_CASE for constants
-- Prefix private members with underscore: `_privateMethod()`
+-   Use camelCase for variables and functions
+-   Use PascalCase for classes and types
+-   Use UPPER_SNAKE_CASE for constants
+-   Prefix private members with underscore: `_privateMethod()`
 
 ### Code Organization
 
-- Keep files focused on a single responsibility
-- Use appropriate file extensions (`.ts` for TypeScript, `.js` for JavaScript)
-- Group related functionality into directories
-- Use descriptive, meaningful file and variable names
+-   Keep files focused on a single responsibility
+-   Use appropriate file extensions (`.ts` for TypeScript, `.js` for JavaScript)
+-   Group related functionality into directories
+-   Use descriptive, meaningful file and variable names
 
 ---
 
@@ -400,27 +433,27 @@ Each plugin requires:
 
 ```json
 {
-  "id": "unique-plugin-id",
-  "name": "Human Readable Name",
-  "version": "1.0.0",
-  "description": "What this plugin does",
-  "author": "Your Name",
-  "homepage": "https://example.com",
-  "loadAsModule": false,
-  "main": "dist/plugin.js"
+    "id": "unique-plugin-id",
+    "name": "Human Readable Name",
+    "version": "1.0.0",
+    "description": "What this plugin does",
+    "author": "Your Name",
+    "homepage": "https://example.com",
+    "loadAsModule": false,
+    "main": "dist/plugin.js"
 }
 ```
 
 **Manifest Keys:**
 
-- `id`: Required, unique identifier
-- `name`: Required, human-readable name
-- `version`: Required, semantic versioning (no `v` prefix)
-- `description`: Optional, plugin description
-- `author`: Optional, comma-separated if multiple
-- `homepage`: Optional, valid URL with protocol
-- `loadAsModule`: Optional, `true` for ESM, `false` for standard script
-- `main`: Required, relative path to main file from plugin root
+-   `id`: Required, unique identifier
+-   `name`: Required, human-readable name
+-   `version`: Required, semantic versioning (no `v` prefix)
+-   `description`: Optional, plugin description
+-   `author`: Optional, comma-separated if multiple
+-   `homepage`: Optional, valid URL with protocol
+-   `loadAsModule`: Optional, `true` for ESM, `false` for standard script
+-   `main`: Required, relative path to main file from plugin root
 
 ### Plugin API
 
@@ -461,17 +494,17 @@ localStorage.setItem("plugin-id", JSON.stringify(pluginData));
 
 See example plugins in `plugins/` directory:
 
-- **control-blocks-outline**: Outlines blocks
-- **dark-context-menu**: Dark theme for context menus
-- **plugin-manager**: Manages plugin installation
+-   **control-blocks-outline**: Outlines blocks
+-   **dark-context-menu**: Dark theme for context menus
+-   **plugin-manager**: Manages plugin installation
 
 ### Plugin Security
 
 Users must manually:
 
-- Provide the manifest URL
-- Approve plugin installation
-- Update plugins manually
+-   Provide the manifest URL
+-   Approve plugin installation
+-   Update plugins manually
 
 **Important**: Be respectful of user trust. Plugins have broad access to modify Battlefield Portal.
 
@@ -497,9 +530,9 @@ For public plugins:
 
 The project uses **Semantic Versioning** (MAJOR.MINOR.PATCH):
 
-- MAJOR: Breaking changes
-- MINOR: New features (backwards compatible)
-- PATCH: Bug fixes
+-   MAJOR: Breaking changes
+-   MINOR: New features (backwards compatible)
+-   PATCH: Bug fixes
 
 Update version in `package.json` before release.
 
@@ -507,29 +540,29 @@ Update version in `package.json` before release.
 
 1. **Update version** in `package.json`
 2. **Test thoroughly**
-   - Run `npm run lint` for code quality
-   - Test in Chrome/Edge and Firefox
-   - Verify plugin system works
+    - Run `npm run lint` for code quality
+    - Test in Chrome/Edge and Firefox
+    - Verify plugin system works
 3. **Build for all platforms**
-   ```bash
-   npm run build:browser:all
-   ```
+    ```bash
+    npm run build:browser:all
+    ```
 4. **Create GitHub Release**
-   - Tag: `v{version}`
-   - Attach build artifacts:
-     - `chromium.zip` for Chrome/Edge
-     - `firefox.xpi` for Firefox
+    - Tag: `v{version}`
+    - Attach build artifacts:
+        - `chromium.zip` for Chrome/Edge
+        - `firefox.xpi` for Firefox
 5. **Submit to stores** (if updates needed)
-   - Chrome Web Store
-   - Edge Addons
-   - Mozilla Addons
+    - Chrome Web Store
+    - Edge Addons
+    - Mozilla Addons
 
 ### Distribution Channels
 
-- **Chrome Web Store**: Automatic updates when submitted
-- **Edge Addons**: Automatic updates when submitted
-- **Mozilla Addons**: Automatic updates when submitted
-- **GitHub Releases**: Manual downloads for offline installation
+-   **Chrome Web Store**: Automatic updates when submitted
+-   **Edge Addons**: Automatic updates when submitted
+-   **Mozilla Addons**: Automatic updates when submitted
+-   **GitHub Releases**: Manual downloads for offline installation
 
 ---
 
@@ -537,15 +570,15 @@ Update version in `package.json` before release.
 
 ### Documentation
 
-- **Main README**: `README.md` - Overview and installation
-- **Plugin Guide**: `plugins/README.md` - Plugin development
-- **Plugin Index**: `plugins/plugin-index.md` - Available plugins
+-   **Main README**: `README.md` - Overview and installation
+-   **Plugin Guide**: `plugins/README.md` - Plugin development
+-   **Plugin Index**: `plugins/plugin-index.md` - Available plugins
 
 ### Community
 
-- **GitHub Issues**: Report bugs or request features
-- **GitHub Discussions**: Ask questions and discuss ideas
-- **Wiki**: Extended documentation and guides
+-   **GitHub Issues**: Report bugs or request features
+-   **GitHub Discussions**: Ask questions and discuss ideas
+-   **Wiki**: Extended documentation and guides
 
 ### Common Tasks
 
@@ -575,11 +608,11 @@ Update version in `package.json` before release.
 
 This project combines:
 
-- **TypeScript** for type safety
-- **Vite** for fast builds
-- **ESLint + Prettier** for code quality
-- **Browser APIs** for extension functionality
-- **Plugin system** for extensibility
+-   **TypeScript** for type safety
+-   **Vite** for fast builds
+-   **ESLint + Prettier** for code quality
+-   **Browser APIs** for extension functionality
+-   **Plugin system** for extensibility
 
 All development happens in TypeScript in `src/web/`, while `src/browser/` handles browser-specific packaging. The build system creates optimized packages for Chrome, Edge, and Firefox across multiple Battlefield game titles.
 
