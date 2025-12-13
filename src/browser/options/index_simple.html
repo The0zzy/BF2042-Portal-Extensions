@@ -1,0 +1,71 @@
+<html>
+    <head>
+        <title>BF Portal Extension</title>
+        <link rel="stylesheet" href="css/default.css" />
+    </head>
+
+    <body>
+        <div class="header" style="display: inline-block;">
+            <div style="float: inline-start;">
+                <img src="img/logo.svg" width="200" />
+            </div>
+            <div style="float: inline-end;">
+                <a
+                    href="https://github.com/The0zzy/bf-portal-extension"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    <span id="title">BF Portal Extension</span>
+                    <span id="version"></span>
+                </a>
+                <br />
+                <a
+                    href="https://github.com/battlefield-portal-community"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    <span id="author">by BF Portal Community</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="main">
+            <small>
+                <span class="font-weight-bold">Important!</span>
+                <br />
+                A loaded version of the extension script can manipulate anything
+                on
+                <pre style="display: inline;">
+https://portal.battlefield.com/</pre
+                >
+                <br />
+                Only use the
+                <a
+                    href="https://bf2042-portal-extensions.lennardf1989.com/dist/manifest.json"
+                    target="_blank"
+                    rel="noopener"
+                    id="officialManifest"
+                    >official extension manifest</a
+                >, or a manifest from people you trust!
+            </small>
+            <br />
+            <br />
+            <input type="checkbox" id="loadDefault" checked="true" />
+            <label for="loadDefault">Load default extension manifest</label>
+            <br />
+            <br />
+            <form id="custom-extension" onsubmit="alert('Not implemented!')">
+                <label for="manifest-url">Custom Extension Manifest: </label>
+                <br />
+                <input
+                    type="text"
+                    placeholder="https://trusted-domain.tld/trusted/manifest.json"
+                    id="manifest-url"
+                />
+                <input type="submit" value="Load" />
+            </form>
+        </div>
+
+        <script src="js/app.js"></script>
+    </body>
+</html>

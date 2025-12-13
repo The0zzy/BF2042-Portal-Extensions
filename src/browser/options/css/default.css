@@ -1,5 +1,35 @@
 body {
     width: 480px;
+    padding: 0px;
+    margin: 0px;
+    background-color: #222;
+    color: #ddd;
+}
+
+.header {
+    width: 100%;
+    background-color: black;
+    padding: 5px;
+    vertical-align: middle;
+}
+
+a {
+    color: fff;
+    font-family: Arial, Helvetica, sans-serif;
+    text-decoration: none;
+}
+
+.header #title {
+    font-weight: bold;
+}
+
+.header #author {
+    font-size: smaller;
+}
+
+.main pre {
+    color: darkorange;
+    display: inline;
 }
 
 nav {
